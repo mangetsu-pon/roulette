@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>カスタムルーレット</title>
+<style>
+    :root {
+        --bg: #f1f5f9;
+        --card: #ffffff;
+        --text: #334155;
+        --text-dark: #0f172a;
+        --muted: #64748b;
+        --border: #cbd5e1;
+        --primary: #2563eb;
+        --primary-hover: #1d4ed8;
+        --success: #10b981;
+        --success-hover: #059669;
+        --danger: #ef4444;
+        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --radius: 12px;
+        --pointer-color: #0f172a;
+        --outline-color: #0f172a;
+    }
+
+    [data-theme="dark"] {
+        --bg: #0f172a;
+        --card: #1e293b;
+        --text: #cbd5e1;
+        --text-dark: #f8fafc;
+        --muted: #94a3b8;
+        --border: #334155;
+        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        --pointer-color: #f8fafc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        margin: 0;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+        transition: background-color 0.3s, color 0.3s;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 1400px; 
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding-bottom: 60px;
+    }
+
+    .header-controls {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--card);
+        padding: 12px 16px;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        gap: 12px;
+    }
+
+    .header-left, .header-right {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        flex: 1 1 0; 
+    }
+    .header-left { justify-content: flex-start; }
+    .header-right { justify-content: flex-end; }
+
+    select, textarea {
+        padding: 8px 12px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 1rem;
+        outline: none;
+        background: var(--card);
+        color: var(--text);
+        transition: border-color 0.2s, background-color 0.3s, color 0.3s;
+    }
+    textarea:focus, select:focus { border-color: var(--primary); }
+
+    #projectSelect {
+        max-width: 180px;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    .project-name-input {
+        font-weight: 900;
+        font-size: 1.3rem;
+        text-align: center;
+        border: none;
+        background: transparent;
+        color: var(--text-dark);
+        width: 100%;
+        max-width: 400px;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+        padding: 4px 8px;
+        transition: background 0.2s, color 0.3s;
+        border-radius: 6px;
+    }
+    .project-name-input:focus {
+        background: var(--bg);
+        outline: 2px solid var(--primary);
+    }
+
+    button {
+        background: var(--border);
+        color: var(--text-dark);
+        border: none;
+        padding: 8px 14px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    button:hover { filter: brightness(0.95); }
+    [data-theme="dark"] button { background: #334155; }
+    [data-theme="dark"] button:hover { filter: brightness(1.2); }
+    
+    button.outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+    button.outline:hover { background: var(--primary); color: white; }
+    button.danger { background: #fee2e2; color: #dc2626; border: none; }
+    [data-theme="dark"] button.danger { background: #7f1d1d; color: #fca5a5; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .action-bar {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 16px;
+        position: relative;
+        padding: 0 20px;
+        flex-wrap: wrap;
+    }
+
+    .bulk-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .btn-spin-all {
+        font-size: 1.3rem;
+        padding: 12px 40px;
+        background: var(--success);
+        color: white;
+        border-radius: 99px;
+        box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+    }
+    .btn-spin-all:hover { background: var(--success-hover); transform: translateY(-2px); }
+    .btn-spin-all:active { transform: translateY(0); }
+    .btn-spin-all:disabled { background: var(--muted); cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .btn-bulk-sub {
+        font-size: 0.95rem;
+        padding: 10px 20px;
+        border-radius: 99px;
+        background: var(--card);
+        border: 2px solid var(--border);
+        color: var(--text);
+    }
+
+    .btn-toggle-edit {
+        position: absolute;
+        right: 0;
+        background: #475569;
+        color: white;
+    }
+    
+    body:not(.edit-mode) .edit-mode-only { display: none !important; }
+    body.edit-mode .play-mode-only { display: none !important; }
+    body.edit-mode .btn-toggle-edit { background: var(--danger); }
+
+    .roulettes-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); 
+        gap: 24px;
+        justify-content: center;
+        align-items: flex-start;
+    }
+
+    .roulette-card {
+        background: var(--card);
+        border-radius: var(--radius);
+        padding: 24px;
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        width: 100%; 
+        transition: opacity 0.2s, background-color 0.3s;
+    }
+    .roulette-card.dragging { opacity: 0.4; }
+
+    .card-edit-controls {
+        display: flex;
+        width: 100%;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+    
+    .drag-handle {
+        cursor: grab;
+        font-size: 1.5rem;
+        color: var(--muted);
+        padding: 0 8px;
+        user-select: none;
+    }
+    .drag-handle:active { cursor: grabbing; color: var(--primary); }
+    .delete-btn { padding: 4px 12px; font-size: 0.9rem;}
+
+    .roulette-title-wrapper {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+    .roulette-title {
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: var(--text-dark);
+        margin: 0 0 16px 0;
+        text-align: center;
+        border-bottom: 3px solid var(--primary);
+        padding-bottom: 4px;
+        word-break: break-word;
+        white-space: pre-wrap; 
+        width: 100%;
+        max-width: 360px; 
+    }
+
+    .roulette-title-input {
+        width: 100%;
+        text-align: center;
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin-bottom: 16px;
+        resize: vertical;
+        font-family: inherit;
+        background: var(--bg);
+        color: var(--text-dark);
+    }
+
+    .canvas-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 360px; 
+        aspect-ratio: 1 / 1;
+        cursor: pointer;
+        transition: transform 0.1s;
+    }
+    body:not(.edit-mode) .canvas-wrapper:hover { transform: scale(1.02); }
+    body:not(.edit-mode) .canvas-wrapper:active { transform: scale(0.98); }
+
+    canvas {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .pointer {
+        position: absolute;
+        top: 50%;
+        right: -12px;
+        transform: translateY(-50%);
+        width: 0;
+        height: 0;
+        border-top: 16px solid transparent; 
+        border-bottom: 16px solid transparent; 
+        border-right: 40px solid var(--pointer-color); 
+        z-index: 10;
+        filter: drop-shadow(-2px 2px 4px rgba(0,0,0,0.4));
+        pointer-events: none;
+        transition: border-right-color 0.3s;
+    }
+
+    .result-display {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        font-weight: 900;
+        color: white;
+        text-align: center;
+        width: 96%; 
+        pointer-events: none;
+        opacity: 0;
+        z-index: 20;
+        line-height: 1.2;
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+    }
+
+    .result-display::before {
+        content: attr(data-text);
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 100%;
+        -webkit-text-stroke: 0.15em var(--outline-color);
+        z-index: -1;
+        text-shadow: 0 0.15em 0.3em rgba(0,0,0,0.7);
+    }
+
+    .result-display.pop {
+        animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    @keyframes popIn {
+        0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+        50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+        100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+
+    .post-spin-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 20px;
+        width: 100%;
+        justify-content: center;
+        min-height: 38px;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 0.2s;
+    }
+    .post-spin-actions.show {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+    
+    .btn-hide { background: var(--card); color: var(--danger); border: 2px solid var(--danger); padding: 8px 12px; font-size: 0.95rem;}
+    .btn-hide:hover { background: var(--danger); color: white; }
+    .btn-reset { background: var(--card); color: var(--text); border: 2px solid var(--border); padding: 8px 12px; font-size: 0.95rem;}
+
+    .edit-area textarea {
+        width: 100%;
+        height: 150px;
+        resize: vertical;
+        font-size: 1rem;
+        margin-top: 16px;
+    }
+
+    .card-add {
+        min-height: 300px;
+        border: 3px dashed var(--border);
+        border-radius: var(--radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        cursor: pointer;
+        color: var(--muted);
+        font-size: 1.4rem;
+        font-weight: bold;
+        transition: 0.2s;
+    }
+
+    #toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: var(--text-dark);
+        color: var(--card);
+        padding: 12px 24px;
+        border-radius: 99px;
+        font-size: 1rem;
+        font-weight: bold;
+        opacity: 0;
+        pointer-events: none;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1000;
+        box-shadow: var(--shadow);
+    }
+    #toast.show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+
+    @media (max-width: 900px) {
+        .header-controls { flex-direction: column; align-items: stretch; }
+        .header-left, .header-right { justify-content: center; }
+        .project-name-input { order: -1; margin-bottom: 8px; }
+        
+        .action-bar { flex-direction: column; width: 100%; padding: 0; }
+        .btn-toggle-edit { position: relative; width: 100%; }
+        
+        .roulettes-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        .roulette-card { padding: 16px; }
+    }
+    
+    @media (max-width: 600px) {
+        .roulettes-grid { grid-template-columns: 1fr; }
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-controls">
+        <div class="header-left">
+            <select id="projectSelect" title="保存したプロジェクトを読み込む"></select>
+            <button type="button" id="btnNewProject" class="outline">＋ 新規</button>
+            <button type="button" id="btnDuplicateProject" class="outline">複製</button>
+        </div>
+        <input type="text" id="projectNameInput" class="project-name-input" placeholder="プロジェクト名" title="">
+        <div class="header-right">
+            <button type="button" id="btnThemeToggle">ダークモード</button>
+            <button type="button" id="btnDeleteProject" class="danger">プロジェクト削除</button>
+        </div>
+    </div>
+
+    <div class="action-bar">
+        <div class="bulk-actions play-mode-only">
+            <button type="button" id="btnHideAll" class="btn-bulk-sub">一括除外</button>
+            <button type="button" id="btnSpinAll" class="btn-spin-all" title="ショートカット: Spaceキー">一括スピン (Space)</button>
+            <button type="button" id="btnResetAll" class="btn-bulk-sub" title="すべてのルーレットを初期状態に戻します">一括リセット</button>
+        </div>
+        <button type="button" id="btnToggleEdit" class="btn-toggle-edit">✎ 編集モード</button>
+    </div>
+
+    <div class="roulettes-grid" id="roulettesGrid"></div>
+</div>
+
+<div id="toast">保存しました</div>
+
+<script>
+const colors = [
+    '#e63946', '#f4a261', '#e9c46a', '#2a9d8f', '#457b9d', 
+    '#8ab17d', '#b5838d', '#a0c4ff', '#ffb4a2'
+];
+
+let appData = { profiles: [], activeProfileId: null };
+let currentRouletteInstances = [];
+let isEditMode = false;
+let toastTimeout;
+
+const projectSelect = document.getElementById('projectSelect');
+const projectNameInput = document.getElementById('projectNameInput');
+const btnNewProject = document.getElementById('btnNewProject');
+const btnDuplicateProject = document.getElementById('btnDuplicateProject');
+const btnDeleteProject = document.getElementById('btnDeleteProject');
+const btnSpinAll = document.getElementById('btnSpinAll');
+const btnHideAll = document.getElementById('btnHideAll');
+const btnResetAll = document.getElementById('btnResetAll');
+const btnToggleEdit = document.getElementById('btnToggleEdit');
+const btnThemeToggle = document.getElementById('btnThemeToggle');
+const roulettesGrid = document.getElementById('roulettesGrid');
+const toastEl = document.getElementById('toast');
+
+function showToast(message) {
+    toastEl.textContent = message;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+        toastEl.classList.remove('show');
+    }, 2500);
+}
+
+function initTheme() {
+    const savedTheme = localStorage.getItem('custom_roulette_theme');
+    if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        btnThemeToggle.textContent = 'ライトモード';
+    }
+}
+
+btnThemeToggle.addEventListener('click', () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+        document.documentElement.removeAttribute('data-theme');
+        btnThemeToggle.textContent = 'ダークモード';
+        localStorage.setItem('custom_roulette_theme', 'light');
+        showToast('ライトモードに切り替えました');
+    } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        btnThemeToggle.textContent = 'ライトモード';
+        localStorage.setItem('custom_roulette_theme', 'dark');
+        showToast('ダークモードに切り替えました');
+    }
+});
+
+function init() {
+    initTheme();
+    loadData();
+    if (appData.profiles.length === 0) {
+        createNewProject("新規プロジェクト");
+    }
+    if (!appData.activeProfileId && appData.profiles.length > 0) {
+        appData.activeProfileId = appData.profiles[0].id;
+    }
+    renderHeader();
+    renderRoulettes();
+}
+
+function loadData() {
+    const saved = localStorage.getItem('custom_roulette_data_v13');
+    if (saved) {
+        try { appData = JSON.parse(saved); } catch(e) { console.error(e); }
+    }
+    appData.profiles.forEach(p => {
+        p.roulettes.forEach(r => {
+            if (r.originalItems === undefined) r.originalItems = r.items;
+        });
+    });
+}
+
+function saveData(doSync = true, quiet = false) {
+    if (doSync) syncCurrentStateToActiveProfile();
+    localStorage.setItem('custom_roulette_data_v13', JSON.stringify(appData));
+    if (!quiet) showToast('自動保存しました');
+}
+
+function getActiveProfile() {
+    return appData.profiles.find(p => p.id === appData.activeProfileId);
+}
+
+function generateId() {
+    return Math.random().toString(36).substr(2, 9);
+}
+
+function getUniqueProjectName(baseName) {
+    let name = baseName;
+    let counter = 1;
+    while (appData.profiles.some(p => p.name === name)) {
+        name = `${baseName}${counter}`;
+        counter++;
+    }
+    return name;
+}
+
+function createNewProject(baseName) {
+    const newName = getUniqueProjectName(baseName);
+    const newProj = {
+        id: generateId(),
+        name: newName,
+        roulettes: [ { 
+            id: generateId(), 
+            title: 'ルーレット 1', 
+            items: '項目1\n項目2\n項目3',
+            originalItems: '項目1\n項目2\n項目3'
+        } ]
+    };
+    appData.profiles.push(newProj);
+    appData.activeProfileId = newProj.id;
+    
+    projectNameInput.value = newName;
+    projectNameInput.title = newName;
+    
+    saveData(false, true);
+    showToast(`プロジェクト「${newName}」を作成しました`);
+}
+
+projectNameInput.addEventListener('input', () => {
+    let newName = projectNameInput.value.trim() || "無題のプロジェクト";
+    projectNameInput.title = newName; 
+    const profile = getActiveProfile();
+    if (profile) {
+        profile.name = newName;
+        saveData(true, true);
+        const opt = projectSelect.querySelector(`option[value="${profile.id}"]`);
+        if (opt) opt.textContent = newName;
+    }
+});
+
+projectNameInput.addEventListener('change', () => {
+    let newName = projectNameInput.value.trim() || "無題のプロジェクト";
+    let counter = 1;
+    let baseName = newName;
+    while (appData.profiles.some(p => p.id !== appData.activeProfileId && p.name === newName)) {
+        newName = `${baseName}${counter}`;
+        counter++;
+    }
+    projectNameInput.value = newName;
+    projectNameInput.title = newName;
+    const profile = getActiveProfile();
+    if (profile) {
+        profile.name = newName;
+        saveData(true, true);
+        const opt = projectSelect.querySelector(`option[value="${profile.id}"]`);
+        if (opt) opt.textContent = newName;
+    }
+    showToast('プロジェクト名を変更しました');
+});
+
+function updateProjectSelectTitle() {
+    const opt = projectSelect.options[projectSelect.selectedIndex];
+    if(opt) projectSelect.title = opt.textContent;
+}
+
+function renderHeader() {
+    projectSelect.innerHTML = '';
+    appData.profiles.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        if (p.id === appData.activeProfileId) opt.selected = true;
+        projectSelect.appendChild(opt);
+    });
+    updateProjectSelectTitle();
+    
+    const profile = getActiveProfile();
+    projectNameInput.value = profile ? profile.name : '';
+    projectNameInput.title = profile ? profile.name : '';
+}
+
+function syncCurrentStateToActiveProfile() {
+    const profile = getActiveProfile();
+    if (!profile) return;
+    profile.name = projectNameInput.value.trim() || "無題のプロジェクト";
+    
+    if (isEditMode) {
+        const cards = document.querySelectorAll('.roulette-card');
+        profile.roulettes = [];
+        cards.forEach(card => {
+            if(!card.dataset.id) return;
+            profile.roulettes.push({
+                id: card.dataset.id,
+                title: card.querySelector('.roulette-title-input').value,
+                items: card.querySelector('.items-textarea').value,
+                originalItems: card.dataset.originalItems || card.querySelector('.items-textarea').value
+            });
+        });
+    }
+}
+
+let draggedIndex = null;
+
+function renderRoulettes(doSync = true) {
+    if (doSync && isEditMode) syncCurrentStateToActiveProfile();
+    
+    roulettesGrid.innerHTML = '';
+    currentRouletteInstances = [];
+
+    const profile = getActiveProfile();
+    if (!profile) return;
+
+    profile.roulettes.forEach((rData, index) => {
+        const card = document.createElement('div');
+        card.className = 'roulette-card';
+        card.dataset.id = rData.id;
+        card.dataset.originalItems = rData.originalItems || rData.items;
+        
+        if (isEditMode) {
+            card.addEventListener('dragstart', (e) => {
+                draggedIndex = index;
+                e.dataTransfer.effectAllowed = 'move';
+                card.classList.add('dragging');
+            });
+            card.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            });
+            card.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (draggedIndex === null || draggedIndex === index) return;
+                const item = profile.roulettes.splice(draggedIndex, 1)[0];
+                profile.roulettes.splice(index, 0, item);
+                saveData(false, true);
+                renderRoulettes(false);
+            });
+            card.addEventListener('dragend', () => {
+                card.classList.remove('dragging');
+                card.draggable = false;
+                draggedIndex = null;
+            });
+        }
+        
+        card.innerHTML = `
+            <div class="card-edit-controls edit-mode-only">
+                <div class="drag-handle" title="ドラッグして並び替え">☰</div>
+                <button type="button" class="delete-btn danger">削除</button>
+            </div>
+            
+            <textarea class="roulette-title-input edit-mode-only" rows="2" placeholder="タイトル">${rData.title}</textarea>
+            
+            <div class="roulette-title-wrapper play-mode-only">
+                <div class="roulette-title">${rData.title}</div>
+            </div>
+
+            <div class="canvas-wrapper" id="wrapper_${rData.id}">
+                <div class="pointer"></div>
+                <canvas id="canvas_${rData.id}" width="800" height="800"></canvas>
+                <div class="result-display" id="result_${rData.id}"></div>
+            </div>
+
+            <div class="post-spin-actions play-mode-only" id="actions_${rData.id}">
+                <button type="button" class="btn-hide outline" id="btnHide_${rData.id}"></button>
+                <button type="button" class="btn-reset outline" id="btnReset_${rData.id}">リセット</button>
+            </div>
+            
+            <div class="edit-area edit-mode-only">
+                <textarea class="items-textarea" placeholder="改行で項目を区切る">${rData.items}</textarea>
+            </div>
+        `;
+        roulettesGrid.appendChild(card);
+
+        if (isEditMode) {
+            const dragHandle = card.querySelector('.drag-handle');
+            dragHandle.addEventListener('mousedown', () => { card.draggable = true; });
+            dragHandle.addEventListener('mouseup', () => { card.draggable = false; });
+            dragHandle.addEventListener('mouseleave', () => { card.draggable = false; });
+            dragHandle.addEventListener('touchstart', () => { card.draggable = true; }, {passive: true});
+            dragHandle.addEventListener('touchend', () => { card.draggable = false; });
+        }
+
+        const palette = index % 2 === 0 ? colors : colors.slice().reverse();
+        const roulette = new Roulette(`canvas_${rData.id}`, `result_${rData.id}`, rData.items, palette);
+        currentRouletteInstances.push(roulette);
+
+        const titleInput = card.querySelector('.roulette-title-input');
+        const textarea = card.querySelector('.items-textarea');
+        const actionsDiv = card.querySelector(`#actions_${rData.id}`);
+        const btnHide = card.querySelector(`#btnHide_${rData.id}`);
+        const btnReset = card.querySelector(`#btnReset_${rData.id}`);
+
+        titleInput.addEventListener('input', () => {
+            rData.title = titleInput.value;
+            card.querySelector('.roulette-title').textContent = rData.title; 
+            saveData(true, true);
+        });
+
+        textarea.addEventListener('input', () => {
+            rData.items = textarea.value;
+            rData.originalItems = textarea.value;
+            card.dataset.originalItems = textarea.value;
+            roulette.setItems(textarea.value);
+            saveData(true, true);
+        });
+        
+        roulette.onSpinEnd = (winner) => {
+            btnHide.textContent = `${winner} を抽選対象から除外`;
+            actionsDiv.classList.add('show');
+        };
+
+        btnHide.addEventListener('click', () => {
+            const winner = roulette.lastWinner;
+            if (winner) {
+                let arr = rData.items.split('\n').filter(x => x.trim() !== "");
+                const idx = arr.indexOf(winner);
+                if (idx > -1) {
+                    arr.splice(idx, 1);
+                    rData.items = arr.join('\n');
+                    textarea.value = rData.items;
+                    roulette.setItems(rData.items);
+                    actionsDiv.classList.remove('show');
+                    roulette.hideResult();
+                    saveData(true, false);
+                }
+            }
+        });
+
+        btnReset.addEventListener('click', () => {
+            const original = card.dataset.originalItems || rData.originalItems;
+            if (original !== undefined) {
+                rData.items = original;
+                textarea.value = rData.items;
+                roulette.setItems(rData.items);
+                actionsDiv.classList.remove('show');
+                roulette.hideResult();
+                saveData(true, false);
+            }
+        });
+
+        const canvasWrapper = card.querySelector(`#wrapper_${rData.id}`);
+        canvasWrapper.addEventListener('click', () => {
+            if (isEditMode || roulette.isSpinning || roulette.items.length === 0) return;
+            actionsDiv.classList.remove('show');
+            
+            canvasWrapper.style.pointerEvents = 'none'; 
+            roulette.spin().then(() => {
+                canvasWrapper.style.pointerEvents = 'auto';
+            });
+        });
+
+        const deleteBtn = card.querySelector('.delete-btn');
+        deleteBtn.addEventListener('click', () => {
+            syncCurrentStateToActiveProfile();
+            profile.roulettes.splice(index, 1);
+            saveData(false, false);
+            renderRoulettes(false);
+            showToast('ルーレットを削除しました');
+        });
+    });
+
+    const addBtn = document.createElement('button');
+    addBtn.type = "button";
+    addBtn.className = 'card-add edit-mode-only';
+    addBtn.textContent = '＋ ルーレットを追加';
+    addBtn.addEventListener('click', () => {
+        syncCurrentStateToActiveProfile(); 
+        profile.roulettes.push({
+            id: generateId(),
+            title: `ルーレット ${profile.roulettes.length + 1}`,
+            items: '項目1\n項目2\n項目3',
+            originalItems: '項目1\n項目2\n項目3'
+        });
+        saveData(false, false); 
+        renderRoulettes(false); 
+        showToast('ルーレットを追加しました');
+    });
+    roulettesGrid.appendChild(addBtn);
+}
+
+// --- キーボードショートカット ---
+document.addEventListener('keydown', (e) => {
+    // 入力欄では無効化
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+        return;
+    }
+    if (e.code === 'Space' && !isEditMode) {
+        e.preventDefault(); 
+        btnSpinAll.click();
+    }
+});
+
+// --- トップレベルのイベント ---
+btnToggleEdit.addEventListener('click', () => {
+    isEditMode = !isEditMode;
+    document.body.classList.toggle('edit-mode', isEditMode);
+    btnToggleEdit.textContent = isEditMode ? '完了' : '✎ 編集モード';
+});
+
+projectSelect.addEventListener('change', (e) => {
+    appData.activeProfileId = e.target.value;
+    updateProjectSelectTitle();
+    renderHeader();
+    renderRoulettes(true);
+    showToast('プロジェクトを切り替えました');
+});
+
+btnNewProject.addEventListener('click', () => {
+    createNewProject("新規プロジェクト");
+    renderHeader();
+    renderRoulettes(false); 
+});
+
+btnDuplicateProject.addEventListener('click', () => {
+    const current = getActiveProfile();
+    if (!current) return;
+    syncCurrentStateToActiveProfile();
+    
+    const clone = JSON.parse(JSON.stringify(current));
+    clone.id = generateId();
+    clone.name = getUniqueProjectName(current.name + " (コピー)");
+    clone.roulettes.forEach(r => r.id = generateId());
+    
+    appData.profiles.push(clone);
+    appData.activeProfileId = clone.id;
+    saveData(false, false);
+    renderHeader();
+    renderRoulettes(false);
+    showToast('プロジェクトを複製しました');
+});
+
+btnDeleteProject.addEventListener('click', () => {
+    if (appData.profiles.length <= 1) {
+        alert("最後のプロジェクトは削除できません。");
+        return;
+    }
+    if (confirm(`プロジェクト「${getActiveProfile().name}」を完全に削除しますか？`)) {
+        appData.profiles = appData.profiles.filter(p => p.id !== appData.activeProfileId);
+        appData.activeProfileId = appData.profiles[0].id;
+        saveData(true, false);
+        renderHeader();
+        renderRoulettes(true);
+        showToast('プロジェクトを削除しました');
+    }
+});
+
+btnSpinAll.addEventListener('click', () => {
+    if (currentRouletteInstances.length === 0) return;
+    currentRouletteInstances.forEach(r => {
+        if (!r.isSpinning && r.items.length > 0) {
+            const actionsDiv = document.getElementById(`actions_${r.id}`);
+            const wrapper = document.getElementById(`wrapper_${r.id}`);
+            if(actionsDiv) actionsDiv.classList.remove('show');
+            
+            wrapper.style.pointerEvents = 'none';
+            r.spin().then(() => {
+                wrapper.style.pointerEvents = 'auto';
+            });
+        }
+    });
+});
+
+btnHideAll.addEventListener('click', () => {
+    let triggered = false;
+    currentRouletteInstances.forEach(r => {
+        const btn = document.getElementById(`btnHide_${r.id}`);
+        if (btn && btn.parentElement.classList.contains('show')) {
+            btn.click();
+            triggered = true;
+        }
+    });
+    if(triggered) showToast('表示中の項目を一括除外しました');
+});
+
+btnResetAll.addEventListener('click', () => {
+    currentRouletteInstances.forEach(r => {
+        const btn = document.getElementById(`btnReset_${r.id}`);
+        if (btn) btn.click();
+    });
+    showToast('すべてのルーレットをリセットしました');
+});
+
+// --- ルーレットクラス ---
+class Roulette {
+    constructor(canvasId, resultId, itemsText, colors) {
+        this.id = canvasId.replace('canvas_', '');
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.resultDisplay = document.getElementById(resultId);
+        this.colors = colors;
+        this.onSpinEnd = null; 
+        
+        this.currentAngle = 0;
+        this.isSpinning = false;
+        
+        this.centerX = this.canvas.width / 2;
+        this.centerY = this.canvas.height / 2;
+        this.radius = this.centerX; 
+        
+        this.setItems(itemsText);
+    }
+
+    setItems(text) {
+        this.items = text.split('\n').filter(item => item.trim() !== "");
+        this.draw();
+    }
+
+    hideResult() {
+        this.resultDisplay.textContent = "";
+        this.resultDisplay.setAttribute('data-text', "");
+        this.resultDisplay.classList.remove('pop');
+    }
+
+    showResult(winner) {
+        this.lastWinner = winner;
+        this.resultDisplay.textContent = winner;
+        this.resultDisplay.setAttribute('data-text', winner);
+        
+        const len = winner.length;
+        let popFontSize = 3.2; 
+        if (len > 5) {
+            popFontSize = Math.max(1.2, 3.2 * (5.5 / len));
+        }
+        this.resultDisplay.style.fontSize = `${popFontSize}rem`;
+        
+        this.resultDisplay.classList.add('pop');
+        
+        if (this.onSpinEnd) this.onSpinEnd(winner);
+    }
+
+    draw() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        if (this.items.length === 0) {
+            this.ctx.fillStyle = "#e2e8f0";
+            this.ctx.beginPath();
+            this.ctx.arc(this.centerX, this.centerY, this.radius, 0, 2 * Math.PI);
+            this.ctx.fill();
+            return;
+        }
+
+        if (this.items.length === 1) {
+            this.ctx.fillStyle = this.colors[0];
+            this.ctx.beginPath();
+            this.ctx.arc(this.centerX, this.centerY, this.radius, 0, 2 * Math.PI);
+            this.ctx.fill();
+
+            this.ctx.textAlign = "center";
+            this.ctx.textBaseline = "middle";
+            this.ctx.fillStyle = "#ffffff";
+            this.ctx.font = "bold 64px sans-serif";
+            
+            this.ctx.shadowColor = "rgba(0,0,0,0.8)";
+            this.ctx.shadowBlur = 6;
+            this.ctx.shadowOffsetX = 3;
+            this.ctx.shadowOffsetY = 3;
+
+            let text = this.items[0];
+            if (text.length > 12) text = text.substring(0, 11) + "…";
+            this.ctx.fillText(text, this.centerX, this.centerY);
+            return;
+        }
+
+        const sliceAngle = (2 * Math.PI) / this.items.length;
+
+        for (let i = 0; i < this.items.length; i++) {
+            const startAngle = this.currentAngle + i * sliceAngle;
+            const endAngle = startAngle + sliceAngle;
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.centerX, this.centerY);
+            this.ctx.arc(this.centerX, this.centerY, this.radius, startAngle, endAngle);
+            this.ctx.closePath();
+            
+            let colorIndex = i % this.colors.length;
+            if (i === this.items.length - 1 && this.items.length % this.colors.length === 1 && this.items.length > 1) {
+                colorIndex = 1;
+            }
+            this.ctx.fillStyle = this.colors[colorIndex];
+            this.ctx.fill();
+
+            if (this.items.length <= 50) {
+                this.ctx.save();
+                this.ctx.translate(this.centerX, this.centerY);
+                this.ctx.rotate(startAngle + sliceAngle / 2);
+                
+                let baseFontSize = 64;
+                if (this.items.length > 8) baseFontSize = 48;
+                if (this.items.length > 15) baseFontSize = 32;
+                if (this.items.length > 25) baseFontSize = 24;
+                if (this.items.length > 40) baseFontSize = 18;
+                
+                const text = this.items[i];
+                const maxCharsPerLine = 12; 
+                
+                let lines = [];
+                for (let j = 0; j < text.length; j += maxCharsPerLine) {
+                    lines.push(text.slice(j, j + maxCharsPerLine));
+                }
+                if (lines.length > 3) {
+                    lines = lines.slice(0, 3);
+                    lines[2] = lines[2].substring(0, 11) + "…";
+                }
+
+                const textRadius = this.radius - 30; 
+                const minRadius = 40; 
+                const availableWidth = textRadius - minRadius;
+                
+                this.ctx.font = `bold ${baseFontSize}px sans-serif`;
+                let maxLineWidth = 0;
+                lines.forEach(line => {
+                    const w = this.ctx.measureText(line).width;
+                    if(w > maxLineWidth) maxLineWidth = w;
+                });
+
+                let finalFontSize = baseFontSize;
+                
+                if (maxLineWidth > availableWidth) {
+                    finalFontSize = Math.floor(baseFontSize * (availableWidth / maxLineWidth));
+                }
+
+                const actualWidth = maxLineWidth * (finalFontSize / baseFontSize);
+                const innerRadius = textRadius - actualWidth; 
+                const availableHeight = innerRadius * sliceAngle;
+                const requiredHeight = lines.length * (finalFontSize * 1.2);
+
+                if (requiredHeight > availableHeight) {
+                    while (finalFontSize > 10) {
+                        let curWidth = maxLineWidth * (finalFontSize / baseFontSize);
+                        let curInnerR = Math.max(10, textRadius - curWidth);
+                        let curAvailH = curInnerR * sliceAngle;
+                        let curReqH = lines.length * (finalFontSize * 1.2);
+                        
+                        if (curReqH <= curAvailH * 0.9) break; 
+                        finalFontSize--;
+                    }
+                }
+
+                if (finalFontSize < 10) finalFontSize = 10; 
+
+                this.ctx.textAlign = "right";
+                this.ctx.textBaseline = "middle";
+                this.ctx.fillStyle = "#ffffff"; 
+                this.ctx.font = `bold ${finalFontSize}px sans-serif`;
+                
+                this.ctx.shadowColor = "rgba(0,0,0,0.8)";
+                this.ctx.shadowBlur = 4;
+                this.ctx.shadowOffsetX = 2;
+                this.ctx.shadowOffsetY = 2;
+                
+                const lineHeight = finalFontSize * 1.2;
+                const startY = -((lines.length - 1) * lineHeight) / 2;
+
+                lines.forEach((line, lineIdx) => {
+                    this.ctx.fillText(line, textRadius, startY + (lineIdx * lineHeight));
+                });
+                this.ctx.restore();
+            }
+        }
+    }
+
+    customEasing(t) {
+        // ゆっくり加速(約3秒) → 最高速(約1秒) → ゆっくり減速(約3秒) のS字カーブ (easeInOutCubic)
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    spin() {
+        if (this.items.length === 0) return Promise.resolve();
+        
+        this.isSpinning = true;
+        this.hideResult();
+
+        return new Promise(resolve => {
+            if (this.items.length === 1) {
+                this.isSpinning = false;
+                this.showResult(this.items[0]);
+                resolve();
+                return;
+            }
+
+            const winningIndex = Math.floor(Math.random() * this.items.length);
+            const sliceAngle = (2 * Math.PI) / this.items.length;
+            
+            const randomOffset = 0.05 + Math.random() * 0.9; 
+            const targetSliceSpot = winningIndex * sliceAngle + (sliceAngle * randomOffset);
+            
+            let finalAngle = (2 * Math.PI) - targetSliceSpot;
+            
+            // 約7秒間で10周する
+            const rotations = 10;
+            const totalRotation = finalAngle + (rotations * 2 * Math.PI) - (this.currentAngle % (2 * Math.PI));
+
+            const duration = 7000; // 7.0秒に設定
+            const startTime = performance.now();
+            const startAngle = this.currentAngle;
+
+            const animate = (currentTime) => {
+                const elapsed = currentTime - startTime;
+                let progress = Math.min(elapsed / duration, 1);
+                
+                const easeValue = this.customEasing(progress);
+                this.currentAngle = startAngle + totalRotation * easeValue;
+                this.draw();
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    this.isSpinning = false;
+                    this.showResult(this.items[winningIndex]);
+                    resolve();
+                }
+            };
+            requestAnimationFrame(animate);
+        });
+    }
+}
+
+init();
+</script>
+</body>
+</html>
